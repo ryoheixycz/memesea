@@ -47,6 +47,9 @@ end
 local Settings = {} do
   Settings.FarmDistance = 8
   Settings.AutoClick = true
+  Settings.AutoSkillZ = false
+  Settings.AutoSkillX = false
+  Settings.SelectedWeapon = "Combat" -- Default weapon type
   Settings.FarmCFrame = CFrame_new(0, Settings.FarmDistance, 0) * CFrame_Angles(math.rad(-90), 0, 0)
 end
 
@@ -54,6 +57,19 @@ local function PlayerClick()
   if Settings.AutoClick then
     VirtualUser:CaptureController()
     VirtualUser:Button1Down(Vector2.new(1e4, 1e4))
+  end
+end
+
+local function UseSkill(skill)
+  local Char = Player.Character
+  if Char then
+    local tool = Char:FindFirstChildOfClass("Tool")
+    if tool then
+      local event = tool:FindFirstChild(skill)
+      if event and event:IsA("RemoteEvent") then
+        event:FireServer()
+      end
+    end
   end
 end
 
@@ -82,7 +98,7 @@ local function EquipWeapon()
   local Backpack, Char = Player:FindFirstChild("Backpack"), Player.Character
   if IsAlive(Char) and Backpack then
     for _, v in ipairs(Backpack:GetChildren()) do
-      if v:IsA("Tool") then
+      if v:IsA("Tool") and v.ToolTip == Settings.SelectedWeapon then
         Char.Humanoid:EquipTool(v)
       end
     end
@@ -95,6 +111,12 @@ local function KillMonster(EnemieName)
     GoTo(Enemie.PrimaryPart.CFrame * Settings.FarmCFrame)
     EquipWeapon()
     PlayerClick()
+    if Settings.AutoSkillZ then
+      UseSkill("Z")
+    end
+    if Settings.AutoSkillX then
+      UseSkill("X")
+    end
     return true
   end
 end
@@ -129,6 +151,19 @@ local function AutoFarmLevel()
   end
 end
 
+local function RedeemAllCodes()
+  local CodeList = Modules:FindFirstChild("CodeList")
+  if CodeList then
+    local Codes = require(CodeList)
+    for Code, Info in pairs(type(Codes) == "table" and Codes or {}) do
+      if type(Code) == "string" and type(Info) == "table" and Info.Status then
+        OtherEvent.MainEvents.Code:InvokeServer(Code)
+        _wait(1)
+      end
+    end
+  end
+end
+
 local Window = OrionLib:MakeWindow({ Name = "Meme Sea Auto Farm", HidePremium = true, SaveConfig = true, ConfigFolder = "OrionTest" })
 
 local FarmTab = Window:MakeTab({
@@ -156,17 +191,49 @@ FarmTab:AddToggle({
   end
 })
 
+FarmTab:AddToggle({
+  Name = "Auto Skill Z",
+  Default = false,
+  Callback = function(Value)
+    Settings.AutoSkillZ = Value
+  end
+})
+
+FarmTab:AddToggle({
+  Name = "Auto Skill X",
+  Default = false,
+  Callback = function(Value)
+    Settings.AutoSkillX = Value
+  end
+})
+
 FarmTab:AddSlider({
   Name = "Farm Distance",
   Min = 5,
   Max = 15,
   Default = 8,
-  Color = Color3.fromRGB(255,255,255),
+  Color = Color3.fromRGB(255, 255, 255),
   Increment = 1,
   ValueName = "Distance",
   Callback = function(Value)
     Settings.FarmDistance = Value
     Settings.FarmCFrame = CFrame_new(0, Value, 0) * CFrame_Angles(math.rad(-90), 0, 0)
+  end
+})
+
+FarmTab:AddDropdown({
+  Name = "Select Weapon",
+  Default = "Combat",
+  Options = { "Combat", "Power", "Sword" },
+  Callback = function(Value)
+    Settings.SelectedWeapon = Value
+  end
+})
+
+FarmTab:AddButton({
+  Name = "Redeem All Codes",
+  Callback = function()
+    RedeemAllCodes()
   end
 })
 
