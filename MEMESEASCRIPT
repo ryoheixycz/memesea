@@ -54,9 +54,10 @@ local Settings = {} do
 end
 
 local function PlayerClick()
-  if Settings.AutoClick then
+  while Settings.AutoClick do
     VirtualUser:CaptureController()
     VirtualUser:Button1Down(Vector2.new(1e4, 1e4))
+    _wait(0.05)  -- Faster auto-click
   end
 end
 
@@ -98,7 +99,7 @@ local function EquipWeapon()
   local Backpack, Char = Player:FindFirstChild("Backpack"), Player.Character
   if IsAlive(Char) and Backpack then
     for _, v in ipairs(Backpack:GetChildren()) do
-      if v:IsA("Tool") and v.ToolTip == Settings.SelectedWeapon then
+      if v:IsA("Tool") and v.ToolTip:find(Settings.SelectedWeapon) then
         Char.Humanoid:EquipTool(v)
       end
     end
@@ -110,7 +111,9 @@ local function KillMonster(EnemieName)
   if IsAlive(Enemie) and Enemie.PrimaryPart then
     GoTo(Enemie.PrimaryPart.CFrame * Settings.FarmCFrame)
     EquipWeapon()
-    PlayerClick()
+    if Settings.AutoClick then
+      task.spawn(PlayerClick)
+    end
     if Settings.AutoSkillZ then
       UseSkill("Z")
     end
@@ -188,6 +191,9 @@ FarmTab:AddToggle({
   Default = true,
   Callback = function(Value)
     Settings.AutoClick = Value
+    if Value then
+      task.spawn(PlayerClick)
+    end
   end
 })
 
